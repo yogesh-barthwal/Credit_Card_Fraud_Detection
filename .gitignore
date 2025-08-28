@@ -207,6 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 *.csv
-data\
-notebooks\
+data/
+notebooks/
 Y:\Data\Projects\Credit_card_fraud_detection\Metrics all models all resamplers.png
