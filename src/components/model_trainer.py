@@ -1,52 +1,3 @@
-# import os,sys
-# from dataclasses import dataclass
-# import numpy as np
-# import pandas as pd
-# from src.exception import CustomException
-# from src.logger import logging
-# from src.utils import save
-
-# from sklearn.linear_model import LogisticRegression
-# from sklearn.tree import DecisionTreeClassifier
-# from sklearn.ensemble import RandomForestClassifier
-# from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
-# from xgboost import XGBClassifier
-# from lightgbm import LGBMClassifier
-# from catboost import CatBoostClassifier
-
-# from imblearn.over_sampling import SMOTE, RandomOverSampler,BorderlineSMOTE, ADASYN
-# from imblearn.under_sampling import RandomUnderSampler
-# from imblearn.combine import SMOTEENN,SMOTETomek
-# from imblearn.pipeline import Pipeline as ImbPipeline
-
-# @dataclass
-# class ModelTrainerConfig:
-#     trained_model_file_path= os.path.join('artifacts','model.pkl')
-
-# class ModelTrainer:
-#     def __init__(self):
-#         self.model_trainer_config= ModelTrainerConfig()
-
-#     def initiate_model_trainer(self,train_array, test_array, use_resampling=True):
-#         """
-#     Trains multiple models on transformed data arrays and returns evaluation results.
-
-#     Parameters
-#     ----------
-#     train_arr : np.array
-#         Transformed training array (features + target)
-#     test_arr : np.array
-#         Transformed testing array (features + target)
-#     use_resampling : bool
-#         Whether to apply SMOTE to training data
-
-#     Returns
-#     -------
-#     df_results: pd.DataFrame
-#         Accuracy, Precision, Recall, F1-score for each model
-#     """
-        
-#         try:
 import os, sys
 from dataclasses import dataclass
 from src.logger import logging
@@ -67,12 +18,17 @@ class ModelTrainer:
     def __init__(self):
         self.model_trainer_config = ModelTrainerConfig()
 
-    def initiate_model_trainer(self, X_train, y_train, X_test, y_test, preprocessor=None, resampler=None):
+    def initiate_model_trainer(self, train_arr, test_arr, preprocessor=None, resampler=None):
         """
         Trains multiple models with optional hyperparameter tuning and returns the best model.
+        Expects train_arr and test_arr with features and target combined (last column = target).
         """
         try:
             logging.info("Starting model training")
+
+            # Split arrays into X and y
+            X_train, y_train = train_arr[:, :-1], train_arr[:, -1]
+            X_test, y_test = test_arr[:, :-1], test_arr[:, -1]
 
             # Define models
             models = {
@@ -84,23 +40,10 @@ class ModelTrainer:
 
             # Define param grids for GridSearchCV
             param_grids = {
-                "RandomForest": {
-                    "model__n_estimators": [100, 200],
-                    "model__max_depth": [None, 10, 20]
-                },
-                "XGBoost": {
-                    "model__n_estimators": [100, 200],
-                    "model__learning_rate": [0.01, 0.1]
-                },
-                "LGBM": {
-                    "model__n_estimators": [100, 200],
-                    "model__learning_rate": [0.01, 0.1]
-                },
-                "CatBoost": {
-                    "model__depth": [4, 6, 8],
-                    "model__learning_rate": [0.01, 0.1],
-                    "model__iterations": [200, 400]
-                }
+                "RandomForest": {"model__n_estimators": [100, 200], "model__max_depth": [None, 10, 20]},
+                "XGBoost": {"model__n_estimators": [100, 200], "model__learning_rate": [0.01, 0.1]},
+                "LGBM": {"model__n_estimators": [100, 200], "model__learning_rate": [0.01, 0.1]},
+                "CatBoost": {"model__depth": [4, 6, 8], "model__learning_rate": [0.01, 0.1], "model__iterations": [200, 400]}
             }
 
             # Evaluate models
@@ -130,3 +73,4 @@ class ModelTrainer:
         except Exception as e:
             logging.error("Error during model training")
             raise CustomException(e, sys)
+

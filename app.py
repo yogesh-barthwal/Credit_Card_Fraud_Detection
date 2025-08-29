@@ -1,66 +1,49 @@
-from flask import Flask, request, render_template
-import numpy as np
+from flask import Flask, render_template, request
 import pandas as pd
-
-from src.pipeline.predict_pipeline import CustomData, PredictPipeline
+import numpy as np
+import pickle
+import os
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET", "POST"])
-def predict_credit_card():
-    if request.method == "GET":
-        # Show input form
-        return render_template("home.html")
+# Load your trained model and preprocessor
+model_path = os.path.join("artifacts", "model.pkl")
+preprocessor_path = os.path.join("artifacts", "preprocessor.pkl")
 
-    else:
-        # Collect form inputs
-        try:
-            data = CustomData(
-                Amount=float(request.form.get("Amount")),
-                V1=float(request.form.get("V1")),
-                V2=float(request.form.get("V2")),
-                V3=float(request.form.get("V3")),
-                V4=float(request.form.get("V4")),
-                V5=float(request.form.get("V5")),
-                V6=float(request.form.get("V6")),
-                V7=float(request.form.get("V7")),
-                V8=float(request.form.get("V8")),
-                V9=float(request.form.get("V9")),
-                V10=float(request.form.get("V10")),
-                V11=float(request.form.get("V11")),
-                V12=float(request.form.get("V12")),
-                V13=float(request.form.get("V13")),
-                V14=float(request.form.get("V14")),
-                V15=float(request.form.get("V15")),
-                V16=float(request.form.get("V16")),
-                V17=float(request.form.get("V17")),
-                V18=float(request.form.get("V18")),
-                V19=float(request.form.get("V19")),
-                V20=float(request.form.get("V20")),
-                V21=float(request.form.get("V21")),
-                V22=float(request.form.get("V22")),
-                V23=float(request.form.get("V23")),
-                V24=float(request.form.get("V24")),
-                V25=float(request.form.get("V25")),
-                V26=float(request.form.get("V26")),
-                V27=float(request.form.get("V27")),
-                V28=float(request.form.get("V28")),
-            )
+with open(model_path, "rb") as f:
+    model = pickle.load(f)
 
-            # Convert to DataFrame
-            pred_df = data.get_data_as_dataframe()
+with open(preprocessor_path, "rb") as f:
+    preprocessor = pickle.load(f)
 
-            # Make prediction
-            pipeline = PredictPipeline()
-            result = pipeline.predict(pred_df)[0]
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("home.html")
 
-            prediction_text = "Fraudulent Transaction" if result == 1 else "Legitimate Transaction"
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        # Collect input features from form
+        input_data = []
+        for i in range(1, 29):
+            input_data.append(float(request.form[f"V{i}"]))
+        input_data.append(float(request.form["Amount"]))
 
-            return render_template("home.html", prediction_text=prediction_text)
+        # Convert to DataFrame for preprocessing
+        columns = [f"V{i}" for i in range(1,29)] + ["Amount"]
+        df = pd.DataFrame([input_data], columns=columns)
 
-        except Exception as e:
-            return render_template("home.html", prediction_text=f"Error: {str(e)}")
+        # Apply preprocessing
+        X_processed = preprocessor.transform(df)
 
+        # Make prediction
+        prediction = model.predict(X_processed)[0]  # 0 = legit, 1 = fraud
+
+        # Render result
+        return render_template("index.html", prediction=int(prediction))
+
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)
